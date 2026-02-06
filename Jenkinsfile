@@ -3,8 +3,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID     = credentials('aws-creds')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-creds')
+        KEY_PATH = "/var/lib/jenkins/jenkinskkp.pem"
     }
 
     stages {
@@ -44,12 +43,20 @@ pipeline {
             }
         }
 
-        stage('Deploy Game to Server') {
-            steps {
-                sh """
-                scp -o StrictHostKeyChecking=no -i /var/lib/jenkins/jenkins-kp.pem -r website/* ubuntu@${SERVER_IP}:/var/www/html/
-                """
-            }
-        }
+stage('Deploy Website') {
+    steps {
+        sh """
+        scp -r -i ${KEY_PATH} -o StrictHostKeyChecking=no website/* \
+        ubuntu@${SERVER_IP}:/tmp/
+        """
+
+        sh """
+        ssh -i ${KEY_PATH} -o StrictHostKeyChecking=no ubuntu@${SERVER_IP} "
+        sudo rm -rf /var/www/html/* &&
+        sudo mv /tmp/* /var/www/html/ &&
+        sudo systemctl restart nginx"
+        """
     }
+}
+ }
 }
